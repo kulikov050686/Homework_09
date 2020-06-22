@@ -26,7 +26,11 @@
                 <MenuItem Header="Открыть историю" Command="{Binding Open}"/>
                 <Separator/>
                 <MenuItem Header="Закрыть" Command="{Binding Exit}"/>
-            </MenuItem>            
+            </MenuItem>
+
+            <MenuItem Header="Прикрепить">
+                <MenuItem Header="Документ" Command="{Binding AddFile}"/>
+            </MenuItem>
         </Menu>
         
         <!-- Вывод текста -->

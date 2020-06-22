@@ -7,6 +7,8 @@ using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using Telegram.Bot;
+using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.InputFiles;
 
 namespace Homework_09
 {
@@ -27,6 +29,7 @@ namespace Homework_09
 
         ICommand openFileToken;
         ICommand addText;
+        ICommand addFile;
         ICommand exit;
         ICommand saveAs;
         ICommand open;
@@ -130,6 +133,29 @@ namespace Homework_09
         }
 
         /// <summary>
+        /// Добавить файл
+        /// </summary>
+        public ICommand AddFile
+        {
+            get 
+            {
+                return addFile ?? (addFile = new RelayCommand((obj) => 
+                {
+                    if(bot != null)
+                    {
+                        string path = FileDialog.SendFileDialog();
+
+                        if(path != null)
+                        {
+                            Send(ListMessages[IndexElement].Id, path);                            
+                        }                        
+                    }
+
+                }, (obj) => openApp));
+            }            
+        }
+
+        /// <summary>
         /// Выход из приложения
         /// </summary>
         public ICommand Exit
@@ -174,7 +200,7 @@ namespace Homework_09
                     }
                 }));
             }            
-        }
+        }        
 
         #endregion
 
@@ -249,7 +275,7 @@ namespace Homework_09
         }
 
         /// <summary>
-        /// Сохранение файла
+        /// Сохранение файла из чата
         /// </summary>
         /// <param name="fileId"></param>
         /// <param name="path"></param>
@@ -263,9 +289,18 @@ namespace Homework_09
             }
         }
 
-        private async void Send()
+        /// <summary>
+        /// Загрузка файла в чат
+        /// </summary>
+        /// <param name="id"> Идентификатор чата </param>
+        /// <param name="path"> Имя файла </param>
+        private async void Send(long id, string path)
         {
-
+            using (FileStream fs = new FileStream(path, FileMode.Open))
+            {
+                var file = new InputOnlineFile(fs, path);
+                await bot.SendDocumentAsync(id, file);
+            }
         }
 
         #endregion
