@@ -95,5 +95,45 @@ namespace Services
 
             return null;
         }
+
+        /// <summary>
+        /// Открывает диалоговое окно для скачиваемого файла
+        /// </summary>
+        /// <param name="fileName"> Название файла </param>
+        public static string DownloadFileDialog(string fileName)
+        {
+            SaveFileDialog saveFileDialog = new Microsoft.Win32.SaveFileDialog();
+
+            saveFileDialog.Title = "Сохранить файл";
+            saveFileDialog.Filter = "All files(*.*)|*.*";
+            saveFileDialog.InitialDirectory = AppDomain.CurrentDomain.BaseDirectory;
+            saveFileDialog.FileName = fileName;
+           
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                return Path.Combine(Directory.GetCurrentDirectory(), fileName);
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Открывает диалоговое окно для загружаемого файла
+        /// </summary>        
+        public static string SendFileDialog()
+        {
+            OpenFileDialog openFileDialog = new Microsoft.Win32.OpenFileDialog();
+
+            openFileDialog.Title = "Открыть файл";
+            openFileDialog.Filter = "All files(*.*)|*.*";
+            openFileDialog.InitialDirectory = AppDomain.CurrentDomain.BaseDirectory;
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                return openFileDialog.FileName;
+            }
+
+            return null;
+        }
     }
 }

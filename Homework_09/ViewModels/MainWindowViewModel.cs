@@ -3,8 +3,10 @@ using Models;
 using Services;
 using System;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Windows;
 using System.Windows.Input;
+using Telegram.Bot;
 
 namespace Homework_09
 {
@@ -15,12 +17,13 @@ namespace Homework_09
     {
         #region Закрытые поля
 
-        TelegramMessageClient client;
+        TelegramBotClient bot;
         Window window;
         ObservableCollection<MessageLog> listMessages;
         string token;
         bool openApp;
         string inputText;
+        int indexElement;
 
         ICommand openFileToken;
         ICommand addText;
@@ -40,7 +43,7 @@ namespace Homework_09
         /// <summary>
         /// Ввод текстовой информации
         /// </summary>
-        public string InputText 
+        public string InputText
         { 
             get => inputText;
 
@@ -52,6 +55,20 @@ namespace Homework_09
         }
 
         /// <summary>
+        /// Номер выбранного элемента списка
+        /// </summary>
+        public int IndexElement
+        { 
+            get => indexElement;
+
+            set 
+            { 
+                indexElement = value;
+                OnPropertyChanged("IndexElement");
+            } 
+        }
+
+        /// <summary>
         /// Список сообщений
         /// </summary>
         public ObservableCollection<MessageLog> ListMessages
@@ -60,11 +77,6 @@ namespace Homework_09
 
             set 
             {
-                if(client != null)
-                {
-                    listMessages = client.BotMessageLog;
-                }                
-
                 listMessages = value;
                 OnPropertyChanged("ListMessages");
             } 
@@ -73,7 +85,7 @@ namespace Homework_09
         /// <summary>
         /// Команда открытия токена бота
         /// </summary>
-        public ICommand OpenFileToken 
+        public ICommand OpenFileToken
         {
             get 
             {
@@ -86,7 +98,11 @@ namespace Homework_09
                         token = temp;
                         openApp = true;
 
-                        client = new TelegramMessageClient(window, token);
+                        bot = new TelegramBotClient(token);                       
+
+                        bot.OnMessage += MessageListener;
+
+                        bot.StartReceiving();
                     }                    
                 }, (obj) => !openApp));
             }
@@ -95,18 +111,18 @@ namespace Homework_09
         /// <summary>
         /// Добавить текст
         /// </summary>
-        public ICommand AddText 
+        public ICommand AddText
         {
             get 
             {
                 return addText ?? (addText = new RelayCommand((obj) => 
                 {
-                    ListMessages.Add(new MessageLog(DateTime.Now.ToLongTimeString(), InputText, "Pavel", 25));
+                    ListMessages.Add(new MessageLog(DateTime.Now.ToLongTimeString(), InputText, "Pavel", 23));
 
-                    if(client != null)
+                    if (bot != null)
                     {
-                        client.SendMessage(InputText, "12345");
-                    }                    
+                        SendMessage(ListMessages[IndexElement].Id, InputText);
+                    }
 
                     InputText = "";
                 }, (obj) => openApp)); 
@@ -116,7 +132,7 @@ namespace Homework_09
         /// <summary>
         /// Выход из приложения
         /// </summary>
-        public ICommand Exit 
+        public ICommand Exit
         {
             get 
             {
@@ -130,7 +146,7 @@ namespace Homework_09
         /// <summary>
         /// Сохранить историю
         /// </summary>
-        public ICommand SaveAs 
+        public ICommand SaveAs
         {
             get 
             {
@@ -144,7 +160,7 @@ namespace Homework_09
         /// <summary>
         /// Открыть сохранённую историю 
         /// </summary>
-        public ICommand Open 
+        public ICommand Open
         {
             get 
             {
@@ -171,7 +187,7 @@ namespace Homework_09
             openApp = false;
             window = ThisWindow();
 
-            ListMessages = new ObservableCollection<MessageLog>();
+            listMessages = new ObservableCollection<MessageLog>();
         }
 
         #region Закрытые методы
@@ -190,6 +206,66 @@ namespace Homework_09
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Обработчик события получения сообщения
+        /// </summary>        
+        private void MessageListener(object sender, Telegram.Bot.Args.MessageEventArgs e)
+        {
+            if(e.Message.Type == Telegram.Bot.Types.Enums.MessageType.Document)
+            {
+                MessageBoxResult result = MessageBox.Show("Выберите один из вариантов","Сохранить документ?", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+                if(result == MessageBoxResult.Yes)
+                {
+                    string path = FileDialog.DownloadFileDialog(e.Message.Document.FileName);
+
+                    if(path != null)
+                    {
+                        Download(e.Message.Document.FileId, path);
+                    }
+                }
+            }
+
+            if (e.Message.Text == null) return;
+
+            var messageText = e.Message.Text;
+
+            window.Dispatcher.Invoke(() =>
+            {
+                ListMessages.Add(new MessageLog(DateTime.Now.ToLongTimeString(), messageText, e.Message.Chat.FirstName, e.Message.Chat.Id));
+            });
+        }
+
+        /// <summary>
+        /// Отправить сообщение
+        /// </summary>
+        /// <param name="text"> Текст сообщения </param>
+        /// <param name="id"> Идентификатор </param>
+        private void SendMessage(long id, string text)
+        {
+            bot.SendTextMessageAsync(id, text);
+        }
+
+        /// <summary>
+        /// Сохранение файла
+        /// </summary>
+        /// <param name="fileId"></param>
+        /// <param name="path"></param>
+        private async void Download(string fileId, string path)
+        {
+            var file = await bot.GetFileAsync(fileId);
+
+            using (FileStream fs = new FileStream(path, FileMode.Create))
+            {
+                await bot.DownloadFileAsync(file.FilePath, fs);
+            }
+        }
+
+        private async void Send()
+        {
+
         }
 
         #endregion
